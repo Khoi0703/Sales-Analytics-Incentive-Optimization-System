@@ -25,7 +25,7 @@ np.random.seed(42)
 # 1. LOAD & CLEAN DATA
 # ─────────────────────────────────────────────
 print("📥 Loading data...")
-df = pd.read_csv("/mnt/user-data/uploads/retail_sales_dataset.csv")
+df = pd.read_csv("retail_sales_dataset.csv")
 df["Date"] = pd.to_datetime(df["Date"])
 df = df[df["Date"].dt.year == 2023].copy()  # keep 12 months clean
 df["Month"] = df["Date"].dt.to_period("M").astype(str)
@@ -278,7 +278,7 @@ transactions = df.merge(
 # ─────────────────────────────────────────────
 print("📁 Writing Excel file...")
 
-OUTPUT = "/home/claude/sales_analytics_report.xlsx"
+OUTPUT = "sales_analytics_report.xlsx"
 
 # Color palette
 C_HEADER_BG   = "1F3864"   # deep navy
