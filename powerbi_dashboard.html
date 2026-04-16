@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #F2F2F2; color: #333; }
+
+  .topbar {
+    background: #1F3864;
+    color: #fff;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .topbar-title { font-size: 15px; font-weight: 700; letter-spacing: 0.5px; }
+  .topbar-sub { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+
+  .nav-tabs {
+    background: #2E75B6;
+    display: flex;
+    gap: 0;
+    padding: 0 20px;
+  }
+  .nav-tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    color: rgba(255,255,255,0.7);
+    font-size: 13px;
+    font-weight: 500;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .nav-tab.active {
+    color: #fff;
+    border-bottom: 3px solid #FFD700;
+    background: rgba(255,255,255,0.1);
+  }
+  .nav-tab:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+  .page { display: none; padding: 16px 20px; }
+  .page.active { display: block; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 14px; }
+  .kpi-card {
+    background: #fff;
+    border-radius: 4px;
+    padding: 12px 14px;
+    border-top: 3px solid #2E75B6;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .kpi-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .kpi-value { font-size: 20px; font-weight: 700; color: #1F3864; }
+  .kpi-sub { font-size: 11px; color: #888; margin-top: 2px; }
+
+  .chart-row { display: grid; gap: 12px; margin-bottom: 14px; }
+  .chart-row-2 { grid-template-columns: 2fr 1fr; }
+  .chart-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .chart-row-full { grid-template-columns: 1fr; }
+
+  .chart-card {
+    background: #fff;
+    border-radius: 4px;
+    padding: 12px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .chart-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1F3864;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th {
+    background: #1F3864;
+    color: #fff;
+    padding: 7px 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  td { padding: 6px 10px; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+  tr:nth-child(even) td { background: #f8f9fc; }
+  tr:hover td { background: #EBF3FB; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .badge-green { background: #E2F0D9; color: #375623; }
+  .badge-yellow { background: #FFF2CC; color: #7D5A00; }
+  .badge-blue { background: #DEEAF1; color: #1F3864; }
+  .badge-red { background: #FCE4D6; color: #843C0C; }
+
+  .tier-star { color: #C7A100; font-weight: 700; }
+  .tier-on { color: #375623; font-weight: 600; }
+  .tier-near { color: #7D5A00; }
+  .tier-below { color: #843C0C; }
+
+  .legend-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #555; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  .slicer-row {
+    background: #fff;
+    border-radius: 4px;
+    padding: 8px 14px;
+    margin-bottom: 12px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    flex-wrap: wrap;
+  }
+  .slicer-label { font-size: 11px; color: #666; font-weight: 600; }
+  select {
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+  }
+
+  .scheme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .scheme-card {
+    background: #fff;
+    border-radius: 4px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .scheme-card.new { border-top: 3px solid #70AD47; }
+  .scheme-card.old { border-top: 3px solid #C55A11; }
+  .scheme-header { font-size: 12px; font-weight: 700; color: #444; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 10px; }
+  .scheme-kpi { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f2f2f2; font-size: 12px; }
+  .scheme-kpi:last-child { border-bottom: none; }
+
+  .footer {
+    background: #1F3864;
+    color: rgba(255,255,255,0.5);
+    text-align: center;
+    padding: 8px;
+    font-size: 10px;
+  }
+
+  .bar-fill {
+    display: inline-block;
+    height: 8px;
+    background: #2E75B6;
+    border-radius: 2px;
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(3, 1fr); }
+    .chart-row-2 { grid-template-columns: 1fr; }
+    .chart-row-3 { grid-template-columns: 1fr 1fr; }
+    .scheme-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">Sales Analytics &amp; Incentive Optimization</div>
+    <div class="topbar-sub">2023 Retail Sales Dataset &nbsp;|&nbsp; 10 Agents &nbsp;|&nbsp; 12 Months &nbsp;|&nbsp; 998 Transactions</div>
+  </div>
+  <div style="font-size:11px;opacity:0.6;">Last refreshed: 2023-12-31</div>
+</div>
+
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="showPage('p1',this)">&#128200; Executive Overview</div>
+  <div class="nav-tab" onclick="showPage('p2',this)">&#128100; Agent Performance</div>
+  <div class="nav-tab" onclick="showPage('p3',this)">&#128258; Scheme Comparison</div>
+  <div class="nav-tab" onclick="showPage('p4',this)">&#128269; Drill-Through Detail</div>
+</div>
+
+<!-- PAGE 1: Executive Overview -->
+<div id="p1" class="page active">
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Sales</div>
+      <div class="kpi-value">$454,470</div>
+      <div class="kpi-sub">998 transactions</div>
+    </div>
+    <div class="kpi-card" style="border-top-color:#70AD47">
+      <div class="kpi-label">% vs Target</div>
+      <div class="kpi-value" style="color:#375623">101.4%</div>
+      <div class="kpi-sub">Target: $448,300</div>
+    </div>
+    <div class="kpi-card" style="border-top-color:#C55A11">
+      <div class="kpi-label">Incentive Cost (New)</div>
+      <div class="kpi-value" style="color:#843C0C">$34,577</div>
+      <div class="kpi-sub">Old: $27,107</div>
+    </div>
+    <div class="kpi-card" style="border-top-color:#FFD700">
+      <div class="kpi-label">ROI (New Scheme)</div>
+      <div class="kpi-value" style="color:#7D5A00">13.14x</div>
+      <div class="kpi-sub">Old: 16.77x</div>
+    </div>
+    <div class="kpi-card" style="border-top-color:#4472C4">
+      <div class="kpi-label">Agents Above Target</div>
+      <div class="kpi-value">5</div>
+      <div class="kpi-sub">of 10 agents</div>
+    </div>
+  </div>
+
+  <div class="chart-row chart-row-2">
+    <div class="chart-card">
+      <div class="chart-title">Sales vs Target — Monthly Trend</div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:#2E75B6"></div>Total Sales</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#C55A11"></div>Target</div>
+      </div>
+      <div style="position:relative;height:230px"><canvas id="salesVsTarget" role="img" aria-label="Monthly sales vs target line chart">Monthly sales and target comparison for 2023</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Performance Tier Distribution</div>
+      <div style="position:relative;height:200px"><canvas id="tierDonut" role="img" aria-label="Donut chart of performance tiers">Agent performance tier distribution</canvas></div>
+      <div class="legend-row" style="margin-top:8px;justify-content:center">
+        <div class="legend-item"><div class="legend-dot" style="background:#FFD700"></div>Star (1)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#70AD47"></div>On Target (4)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FFC000"></div>Near Miss (5)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-row chart-row-2">
+    <div class="chart-card">
+      <div class="chart-title">Regional Sales</div>
+      <div style="position:relative;height:180px"><canvas id="regionBar" role="img" aria-label="Regional sales bar chart">Sales by region</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Agents Above Target per Month</div>
+      <div style="position:relative;height:180px"><canvas id="aboveTargetLine" role="img" aria-label="Monthly count of agents above target">Agents above target each month</canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2: Agent Performance -->
+<div id="p2" class="page">
+  <div class="slicer-row">
+    <span class="slicer-label">Region:</span>
+    <select id="regionFilter" onchange="filterAgents()">
+      <option value="">All Regions</option>
+      <option value="East">East</option>
+      <option value="South">South</option>
+      <option value="Central">Central</option>
+      <option value="North">North</option>
+    </select>
+    <span class="slicer-label">Performance Tier:</span>
+    <select id="tierFilter" onchange="filterAgents()">
+      <option value="">All Tiers</option>
+      <option value="Star">Star</option>
+      <option value="On Target">On Target</option>
+      <option value="Near Miss">Near Miss</option>
+      <option value="Below Target">Below Target</option>
+    </select>
+  </div>
+
+  <div class="chart-card" style="margin-bottom:12px">
+    <div class="chart-title">Agent Leaderboard</div>
+    <div class="table-wrap">
+      <table id="agentTable">
+        <thead>
+          <tr>
+            <th>Rank</th><th>Agent</th><th>Region</th>
+            <th>Total Sales</th><th>% Target</th><th>Performance</th>
+            <th>Incentive (New)</th><th>ROI (New)</th><th>Pay Status</th>
+          </tr>
+        </thead>
+        <tbody id="agentTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="chart-row chart-row-2">
+    <div class="chart-card">
+      <div class="chart-title">Sales by Agent — Annual Total</div>
+      <div style="position:relative;height:300px"><canvas id="agentSalesBar" role="img" aria-label="Agent annual sales bar chart">Annual sales by agent</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Incentive Diff (New vs Old) per Agent</div>
+      <div style="position:relative;height:300px"><canvas id="incentiveWaterfall" role="img" aria-label="Incentive difference per agent">Incentive change new vs old scheme per agent</canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3: Scheme Comparison -->
+<div id="p3" class="page">
+  <div class="scheme-grid">
+    <div class="scheme-card old">
+      <div class="scheme-header">&#x1F4CA; Old Scheme</div>
+      <div class="scheme-kpi"><span style="color:#666">Total Incentive Cost</span><span style="font-weight:700">$27,107</span></div>
+      <div class="scheme-kpi"><span style="color:#666">Overall ROI</span><span style="font-weight:700;color:#375623">16.77x</span></div>
+      <div class="scheme-kpi"><span style="color:#666">Rate (Above 100%)</span><span style="font-weight:700">8%</span></div>
+      <div class="scheme-kpi"><span style="color:#666">Rate (80–99%)</span><span style="font-weight:700">5%</span></div>
+      <div class="scheme-kpi"><span style="color:#666">Top 10% Bonus</span><span style="font-weight:700">—</span></div>
+    </div>
+    <div class="scheme-card new">
+      <div class="scheme-header">&#x2728; New Scheme</div>
+      <div class="scheme-kpi"><span style="color:#666">Total Incentive Cost</span><span style="font-weight:700;color:#843C0C">$34,577</span></div>
+      <div class="scheme-kpi"><span style="color:#666">Overall ROI</span><span style="font-weight:700;color:#843C0C">13.14x</span></div>
+      <div class="scheme-kpi"><span style="color:#666">Rate (Above 100%)</span><span style="font-weight:700;color:#375623">10% (+2%)</span></div>
+      <div class="scheme-kpi"><span style="color:#666">Rate (80–99%)</span><span style="font-weight:700">5%</span></div>
+      <div class="scheme-kpi"><span style="color:#666">Top 10% Bonus</span><span style="font-weight:700;color:#375623">+3%</span></div>
+    </div>
+  </div>
+
+  <div class="chart-row chart-row-2">
+    <div class="chart-card">
+      <div class="chart-title">Incentive Cost — Old vs New by Agent</div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:#C55A11"></div>Old Scheme</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#70AD47"></div>New Scheme</div>
+      </div>
+      <div style="position:relative;height:320px"><canvas id="schemeCompBar" role="img" aria-label="Incentive cost old vs new per agent">Incentive comparison by scheme per agent</canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">ROI Trend — Old vs New Scheme (Monthly)</div>
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:#C55A11"></div>ROI Old</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#70AD47"></div>ROI New</div>
+      </div>
+      <div style="position:relative;height:320px"><canvas id="roiLine" role="img" aria-label="Monthly ROI comparison old vs new scheme">ROI comparison over months</canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Cost vs Sales Scatter — Per Agent (Bubble size = % Target)</div>
+    <div style="position:relative;height:260px"><canvas id="scatterChart" role="img" aria-label="Scatter chart cost vs sales per agent">Agent cost vs sales relationship</canvas></div>
+  </div>
+</div>
+
+<!-- PAGE 4: Drill-Through Detail -->
+<div id="p4" class="page">
+  <div class="slicer-row">
+    <span class="slicer-label">Select Agent:</span>
+    <select id="drillAgent" onchange="updateDrill()">
+      <option value="">All Agents</option>
+    </select>
+  </div>
+
+  <div class="kpi-row" style="grid-template-columns:repeat(4,1fr)">
+    <div class="kpi-card" id="d-sales"><div class="kpi-label">Total Sales</div><div class="kpi-value" id="d-sales-v">—</div></div>
+    <div class="kpi-card" id="d-target"><div class="kpi-label">% vs Target</div><div class="kpi-value" id="d-target-v">—</div></div>
+    <div class="kpi-card" id="d-incentive"><div class="kpi-label">Incentive (New)</div><div class="kpi-value" id="d-incentive-v">—</div></div>
+    <div class="kpi-card" id="d-rank"><div class="kpi-label">Annual Rank</div><div class="kpi-value" id="d-rank-v">—</div></div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title" id="drill-title">Agent Transaction Profile</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Agent</th><th>Region</th><th>Total Sales</th><th>Total Target</th><th>% Target</th><th>Incentive Old</th><th>Incentive New</th><th>Incentive Diff</th><th>Months &ge;100%</th><th>Months &lt;80%</th><th>Performance Tier</th></tr>
+        </thead>
+        <tbody id="drillTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="footer">Sales Analytics Dashboard &nbsp;|&nbsp; Power BI Implementation Guide &nbsp;|&nbsp; Version 1.0 &nbsp;|&nbsp; Confidential — Internal Use Only</div>
+
+<script>
+const AGENTS = [
+  {Rank:1,Agent:"Jack Dang",Region:"East",Total_Sales:58440,Total_Target:58300,Pct_Target:1.0024,Months_Above:7,Months_Below:1,Incentive_Old:3522.5,Incentive_New:4493.15,Incentive_Diff:970.65,ROI_Old:16.59,ROI_New:13.01,Performance_Tier:"On Target",Pay_Status:"Fair"},
+  {Rank:2,Agent:"Giang Do",Region:"South",Total_Sales:55745,Total_Target:57900,Pct_Target:0.9628,Months_Above:6,Months_Below:3,Incentive_Old:2945.95,Incentive_New:4046.95,Incentive_Diff:1101.0,ROI_Old:18.92,ROI_New:13.77,Performance_Tier:"Near Miss",Pay_Status:"Fair"},
+  {Rank:3,Agent:"Chi Le",Region:"Central",Total_Sales:51640,Total_Target:51300,Pct_Target:1.0066,Months_Above:7,Months_Below:2,Incentive_Old:3117.8,Incentive_New:4131.65,Incentive_Diff:1013.85,ROI_Old:16.56,ROI_New:12.5,Performance_Tier:"On Target",Pay_Status:"Fair"},
+  {Rank:4,Agent:"Iris Ngo",Region:"East",Total_Sales:48345,Total_Target:50600,Pct_Target:0.9554,Months_Above:6,Months_Below:2,Incentive_Old:2754.35,Incentive_New:3646.7,Incentive_Diff:892.35,ROI_Old:17.55,ROI_New:13.26,Performance_Tier:"Near Miss",Pay_Status:"Fair"},
+  {Rank:5,Agent:"Hoa Bui",Region:"East",Total_Sales:46120,Total_Target:43900,Pct_Target:1.0506,Months_Above:9,Months_Below:0,Incentive_Old:3435.5,Incentive_New:4588.85,Incentive_Diff:1153.35,ROI_Old:13.42,ROI_New:10.05,Performance_Tier:"On Target",Pay_Status:"Fair"},
+  {Rank:6,Agent:"Em Hoang",Region:"South",Total_Sales:44820,Total_Target:44100,Pct_Target:1.0163,Months_Above:7,Months_Below:2,Incentive_Old:2779.2,Incentive_New:3530.8,Incentive_Diff:751.6,ROI_Old:16.13,ROI_New:12.69,Performance_Tier:"On Target",Pay_Status:"Fair"},
+  {Rank:7,Agent:"Fong Vu",Region:"South",Total_Sales:39475,Total_Target:39800,Pct_Target:0.9918,Months_Above:5,Months_Below:1,Incentive_Old:2294.9,Incentive_New:2655.0,Incentive_Diff:360.1,ROI_Old:17.2,ROI_New:14.87,Performance_Tier:"Near Miss",Pay_Status:"Fair"},
+  {Rank:8,Agent:"An Nguyen",Region:"North",Total_Sales:38400,Total_Target:37800,Pct_Target:1.0159,Months_Above:7,Months_Below:2,Incentive_Old:2327.6,Incentive_New:3020.7,Incentive_Diff:693.1,ROI_Old:16.5,ROI_New:12.71,Performance_Tier:"On Target",Pay_Status:"Fair"},
+  {Rank:9,Agent:"Duc Pham",Region:"Central",Total_Sales:36780,Total_Target:39400,Pct_Target:0.9335,Months_Above:5,Months_Below:1,Incentive_Old:2023.85,Incentive_New:2272.75,Incentive_Diff:248.9,ROI_Old:18.17,ROI_New:16.18,Performance_Tier:"Near Miss",Pay_Status:"Fair"},
+  {Rank:10,Agent:"Binh Tran",Region:"North",Total_Sales:34705,Total_Target:37700,Pct_Target:0.9206,Months_Above:4,Months_Below:0,Incentive_Old:1905.05,Incentive_New:2190.0,Incentive_Diff:284.95,ROI_Old:18.22,ROI_New:15.85,Performance_Tier:"Near Miss",Pay_Status:"Fair"}
+];
+
+const KPI = [
+  {Month:"Jan",Total_Sales:35450,Total_Target:38800,Incentive_Old:1692.65,Incentive_New:2152.1,Agents_Above_Target:3,ROI_Old:20.94,ROI_New:16.47},
+  {Month:"Feb",Total_Sales:44060,Total_Target:46300,Incentive_Old:2191.8,Incentive_New:2754.65,Agents_Above_Target:3,ROI_Old:20.1,ROI_New:15.99},
+  {Month:"Mar",Total_Sales:28990,Total_Target:29000,Incentive_Old:1855.35,Incentive_New:2381.5,Agents_Above_Target:6,ROI_Old:15.63,ROI_New:12.17},
+  {Month:"Apr",Total_Sales:33870,Total_Target:34600,Incentive_Old:2226.3,Incentive_New:2762.85,Agents_Above_Target:5,ROI_Old:15.21,ROI_New:12.26},
+  {Month:"May",Total_Sales:53150,Total_Target:52500,Incentive_Old:3245.15,Incentive_New:4173.6,Agents_Above_Target:5,ROI_Old:16.38,ROI_New:12.73},
+  {Month:"Jun",Total_Sales:36715,Total_Target:37600,Incentive_Old:2110.85,Incentive_New:2791.65,Agents_Above_Target:7,ROI_Old:17.39,ROI_New:13.15},
+  {Month:"Jul",Total_Sales:35465,Total_Target:38400,Incentive_Old:1854.05,Incentive_New:2316.65,Agents_Above_Target:4,ROI_Old:19.13,ROI_New:15.31},
+  {Month:"Aug",Total_Sales:36960,Total_Target:35800,Incentive_Old:2568.75,Incentive_New:3221.0,Agents_Above_Target:7,ROI_Old:14.39,ROI_New:11.47},
+  {Month:"Sep",Total_Sales:23620,Total_Target:23500,Incentive_Old:1213.9,Incentive_New:1699.1,Agents_Above_Target:6,ROI_Old:19.46,ROI_New:13.9},
+  {Month:"Oct",Total_Sales:46580,Total_Target:44800,Incentive_Old:3259.45,Incentive_New:4089.45,Agents_Above_Target:6,ROI_Old:14.29,ROI_New:11.39},
+  {Month:"Nov",Total_Sales:34920,Total_Target:34400,Incentive_Old:1996.45,Incentive_New:2572.2,Agents_Above_Target:5,ROI_Old:17.49,ROI_New:13.58},
+  {Month:"Dec",Total_Sales:44690,Total_Target:45100,Incentive_Old:2892.0,Incentive_New:3661.8,Agents_Above_Target:6,ROI_Old:15.45,ROI_New:12.2}
+];
+
+const REGIONS = [
+  {Region:"East",Total_Sales:152905,Incentive_New:12728.7},
+  {Region:"South",Total_Sales:140040,Incentive_New:10232.75},
+  {Region:"Central",Total_Sales:88420,Incentive_New:6404.4},
+  {Region:"North",Total_Sales:73105,Incentive_New:5210.7}
+];
+
+function fmt(n){return '$'+Math.round(n).toLocaleString();}
+function pct(n){return (n*100).toFixed(1)+'%';}
+
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+// --- PAGE 1 CHARTS ---
+new Chart(document.getElementById('salesVsTarget'), {
+  type:'bar',
+  data:{
+    labels:KPI.map(k=>k.Month),
+    datasets:[
+      {label:'Total Sales',data:KPI.map(k=>k.Total_Sales),backgroundColor:'#2E75B6',borderRadius:2},
+      {label:'Target',data:KPI.map(k=>k.Total_Target),type:'line',borderColor:'#C55A11',backgroundColor:'transparent',borderWidth:2,borderDash:[5,4],pointRadius:3,pointBackgroundColor:'#C55A11'}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'$'+Math.round(v/1000)+'K'},grid:{color:'#f0f0f0'}},x:{ticks:{autoSkip:false}}}}
+});
+
+new Chart(document.getElementById('tierDonut'), {
+  type:'doughnut',
+  data:{
+    labels:['Star','On Target','Near Miss'],
+    datasets:[{data:[1,4,5],backgroundColor:['#FFD700','#70AD47','#FFC000'],borderWidth:2,borderColor:'#fff'}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false}}}
+});
+
+new Chart(document.getElementById('regionBar'), {
+  type:'bar',
+  data:{
+    labels:REGIONS.map(r=>r.Region),
+    datasets:[{label:'Sales',data:REGIONS.map(r=>r.Total_Sales),backgroundColor:['#2E75B6','#1F3864','#4472C4','#70AD47'],borderRadius:3}]
+  },
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>'$'+Math.round(v/1000)+'K'},grid:{color:'#f0f0f0'}},y:{grid:{display:false}}}}
+});
+
+new Chart(document.getElementById('aboveTargetLine'), {
+  type:'line',
+  data:{
+    labels:KPI.map(k=>k.Month),
+    datasets:[{label:'Agents Above Target',data:KPI.map(k=>k.Agents_Above_Target),borderColor:'#70AD47',backgroundColor:'rgba(112,173,71,0.1)',fill:true,tension:0.3,pointRadius:3,pointBackgroundColor:'#70AD47'}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,max:10,ticks:{stepSize:2},grid:{color:'#f0f0f0'}},x:{ticks:{autoSkip:false}}}}
+});
+
+// --- PAGE 2 ---
+function tierBadge(t) {
+  if(t==='Star') return '<span class="badge badge-yellow">&#9733; Star</span>';
+  if(t==='On Target') return '<span class="badge badge-green">&#10003; On Target</span>';
+  if(t==='Near Miss') return '<span class="badge badge-blue">~ Near Miss</span>';
+  return '<span class="badge badge-red">&#8595; Below</span>';
+}
+
+function renderAgentTable(data) {
+  const tbody = document.getElementById('agentTableBody');
+  const maxSales = Math.max(...data.map(a=>a.Total_Sales));
+  tbody.innerHTML = data.map(a => {
+    const barW = Math.round((a.Total_Sales/maxSales)*80);
+    return `<tr>
+      <td><strong>#${a.Rank}</strong></td>
+      <td><strong>${a.Agent}</strong></td>
+      <td>${a.Region}</td>
+      <td><span class="bar-fill" style="width:${barW}px"></span>${fmt(a.Total_Sales)}</td>
+      <td style="color:${a.Pct_Target>=1?'#375623':'#843C0C'};font-weight:600">${pct(a.Pct_Target)}</td>
+      <td>${tierBadge(a.Performance_Tier)}</td>
+      <td>${fmt(a.Incentive_New)}</td>
+      <td>${a.ROI_New.toFixed(2)}x</td>
+      <td><span class="badge badge-green">${a.Pay_Status}</span></td>
+    </tr>`;
+  }).join('');
+}
+renderAgentTable(AGENTS);
+
+function filterAgents() {
+  const region = document.getElementById('regionFilter').value;
+  const tier = document.getElementById('tierFilter').value;
+  let data = AGENTS;
+  if(region) data = data.filter(a=>a.Region===region);
+  if(tier) data = data.filter(a=>a.Performance_Tier===tier);
+  renderAgentTable(data);
+}
+
+const p2salesChart = new Chart(document.getElementById('agentSalesBar'), {
+  type:'bar',
+  data:{
+    labels:AGENTS.map(a=>a.Agent),
+    datasets:[{label:'Total Sales',data:AGENTS.map(a=>a.Total_Sales),backgroundColor:AGENTS.map(a=>a.Performance_Tier==='Star'?'#FFD700':a.Performance_Tier==='On Target'?'#70AD47':'#2E75B6'),borderRadius:2}]
+  },
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>'$'+Math.round(v/1000)+'K'},grid:{color:'#f0f0f0'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
+});
+
+new Chart(document.getElementById('incentiveWaterfall'), {
+  type:'bar',
+  data:{
+    labels:AGENTS.map(a=>a.Agent),
+    datasets:[{label:'Incentive Diff',data:AGENTS.map(a=>a.Incentive_Diff),backgroundColor:AGENTS.map(a=>a.Incentive_Diff>800?'#70AD47':a.Incentive_Diff>400?'#FFC000':'#C55A11'),borderRadius:2}]
+  },
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>'$'+v},grid:{color:'#f0f0f0'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
+});
+
+// --- PAGE 3 ---
+new Chart(document.getElementById('schemeCompBar'), {
+  type:'bar',
+  data:{
+    labels:AGENTS.map(a=>a.Agent),
+    datasets:[
+      {label:'Old Scheme',data:AGENTS.map(a=>a.Incentive_Old),backgroundColor:'#C55A11',borderRadius:2},
+      {label:'New Scheme',data:AGENTS.map(a=>a.Incentive_New),backgroundColor:'#70AD47',borderRadius:2}
+    ]
+  },
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>'$'+v},grid:{color:'#f0f0f0'}},y:{grid:{display:false},ticks:{font:{size:11}}}}}
+});
+
+new Chart(document.getElementById('roiLine'), {
+  type:'line',
+  data:{
+    labels:KPI.map(k=>k.Month),
+    datasets:[
+      {label:'ROI Old',data:KPI.map(k=>k.ROI_Old),borderColor:'#C55A11',backgroundColor:'transparent',tension:0.3,pointRadius:3,pointBackgroundColor:'#C55A11'},
+      {label:'ROI New',data:KPI.map(k=>k.ROI_New),borderColor:'#70AD47',backgroundColor:'transparent',tension:0.3,pointRadius:3,pointBackgroundColor:'#70AD47',borderDash:[4,3]}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+'x'},grid:{color:'#f0f0f0'}},x:{ticks:{autoSkip:false}}}}
+});
+
+new Chart(document.getElementById('scatterChart'), {
+  type:'bubble',
+  data:{
+    datasets:[{
+      label:'Agents',
+      data:AGENTS.map(a=>({x:a.Incentive_New, y:a.Total_Sales, r:Math.max(6,a.Pct_Target*10), agent:a.Agent})),
+      backgroundColor:'rgba(46,117,182,0.65)',
+      borderColor:'#1F3864',
+      borderWidth:1
+    }]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>`${ctx.raw.agent}: Sales ${fmt(ctx.raw.y)}, Incentive ${fmt(ctx.raw.x)}`}}
+    },
+    scales:{
+      x:{title:{display:true,text:'Incentive Cost (New)',font:{size:11}},ticks:{callback:v=>'$'+v},grid:{color:'#f0f0f0'}},
+      y:{title:{display:true,text:'Total Sales',font:{size:11}},ticks:{callback:v=>'$'+Math.round(v/1000)+'K'},grid:{color:'#f0f0f0'},min:20000,max:65000}
+    }
+  }
+});
+
+// --- PAGE 4 ---
+const drillSel = document.getElementById('drillAgent');
+AGENTS.forEach(a=>{
+  const o=document.createElement('option');
+  o.value=a.Agent; o.textContent=a.Agent;
+  drillSel.appendChild(o);
+});
+
+function updateDrill() {
+  const sel = drillSel.value;
+  const data = sel ? AGENTS.filter(a=>a.Agent===sel) : AGENTS;
+  const totalSales = data.reduce((s,a)=>s+a.Total_Sales,0);
+  const totalTarget = data.reduce((s,a)=>s+a.Total_Target,0);
+  const totalIncentive = data.reduce((s,a)=>s+a.Incentive_New,0);
+  document.getElementById('d-sales-v').textContent = fmt(totalSales);
+  document.getElementById('d-target-v').textContent = pct(totalSales/totalTarget);
+  document.getElementById('d-incentive-v').textContent = fmt(totalIncentive);
+  document.getElementById('d-rank-v').textContent = sel ? '#'+AGENTS.find(a=>a.Agent===sel).Rank : '—';
+  document.getElementById('drill-title').textContent = sel ? 'Profile: '+sel : 'All Agents — Annual Summary';
+  const tbody = document.getElementById('drillTableBody');
+  tbody.innerHTML = data.map(a=>`<tr>
+    <td><strong>${a.Agent}</strong></td>
+    <td>${a.Region}</td>
+    <td>${fmt(a.Total_Sales)}</td>
+    <td>${fmt(a.Total_Target)}</td>
+    <td style="color:${a.Pct_Target>=1?'#375623':'#843C0C'};font-weight:600">${pct(a.Pct_Target)}</td>
+    <td>${fmt(a.Incentive_Old)}</td>
+    <td>${fmt(a.Incentive_New)}</td>
+    <td style="color:#375623">+${fmt(a.Incentive_Diff)}</td>
+    <td>${a.Months_Above}</td>
+    <td>${a.Months_Below}</td>
+    <td>${tierBadge(a.Performance_Tier)}</td>
+  </tr>`).join('');
+}
+updateDrill();
+</script>
+</body>
+</html>
