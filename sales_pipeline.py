@@ -6,7 +6,7 @@ Transforms raw retail transaction data into:
   - Monthly performance tracking
   - Incentive calculation (2 schemes: Old vs New)
   - Optimization comparison
-Output: sales_analytics_report.xlsx (Power BI ready)
+Output: sales_analytics_report.xlsx
 """
 
 import pandas as pd
